@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Application\Command;
@@ -8,12 +9,12 @@ use App\Application\System\Command;
 class AddPoints implements Command
 {
     private string $walletId;
-    private int $points;
+    private int $amount;
 
-    public function __construct(string $walletId, int $points)
+    public function __construct(string $walletId, int $amount)
     {
         $this->walletId = $walletId;
-        $this->points = $points;
+        $this->amount = $amount;
     }
 
     public function getWalletId(): string
@@ -21,8 +22,8 @@ class AddPoints implements Command
         return $this->walletId;
     }
 
-    public function getPoints(): int
+    public function getAmount(): int
     {
-        return $this->points;
+        return $this->amount;
     }
 }

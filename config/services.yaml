@@ -6,26 +6,75 @@
 parameters:
 
 services:
-    # default configuration for services in *this* file
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
-    # makes classes in src/ available to be used as services
-    # this creates a service per class whose id is the fully-qualified class name
-    App\:
-        resource: '../src/'
+    App\Infrastructure\:
+        resource: '../src/Infrastructure/'
         exclude:
-            - '../src/DependencyInjection/'
-            - '../src/Entity/'
-            - '../src/Kernel.php'
-            - '../src/Tests/'
+            - '../src/Infrastructure/DoctrineMigrations/'
 
-    # controllers are imported separately to make sure services can be injected
-    # as action arguments even if you don't extend any base controller class
-    App\Controller\:
-        resource: '../src/Controller/'
+    App\UI\Controller\:
+        resource: '../src/UI/Controller/'
         tags: ['controller.service_arguments']
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    App\UI\Command\:
+        resource: '../src/UI/Command/'
+        tags: ['console.command']
+
+    json_serializer:
+        class: Symfony\Component\Serializer\SerializerInterface
+        factory: ['App\Infrastructure\Serializer\SerializerFactory', 'createJsonSerializer']
+
+
+    ##### APPLICATION #####
+
+    command_handlers:
+        namespace: App\Application\CommandHandler\
+        resource: '%kernel.project_dir%/src/Application/CommandHandler/**'
+        tags: [{name: messenger.message_handler, bus: bus_command}]
+
+    ##### INFRASTRUCTURE #####
+
+    App\Infrastructure\System\CommandBus:
+        arguments:
+            - '@bus_command'
+
+    App\Infrastructure\System\EventStreamBus:
+        arguments:
+            - '@bus_event_stream'
+
+    App\Infrastructure\EventStore\MySqlEventStore:
+        arguments:
+            $serializer: '@json_serializer'
+            $tableName: 'event_store'
+
+    App\Infrastructure\Notifier\RedisNotifier:
+        arguments:
+            - '@snc_redis.default'
+            - '@logger'
+
+    App\Infrastructure\ReadModel\Projection\MySqlProjection:
+        tags: [{name: messenger.message_handler, bus: bus_event_stream}]
+
+    App\Infrastructure\EventListener\ProjectionUpdatedListener:
+        tags:
+            - { name: kernel.event_listener, event: !php/const App\Infrastructure\EventListener\ProjectionUpdated::EVENT_NAME, method: onEventsApplied }
+
+    ##### INTERFACES #####
+    App\Application\System\CommandBusInterface: '@App\Infrastructure\System\CommandBus'
+    App\Application\System\EventStreamBusInterface: '@App\Infrastructure\System\EventStreamBus'
+    App\Application\Notifier\NotifierInterface: '@App\Infrastructure\Notifier\RedisNotifier'
+
+    App\Domain\Loyalty\WalletsRepository: '@App\Infrastructure\Repository\EventSourcedWalletsRepository'
+
+    App\Domain\EventSourcing\EventStoreInterface: '@App\Infrastructure\EventStore\MySqlEventStore'
+    App\Domain\EventSourcing\ProjectionInterface: '@App\Infrastructure\ReadModel\Projection\MySqlProjection'
+
+    ##### UI #####
+    App\UI\Command\GenerateC4ModelCommand:
+        arguments:
+            - '%env(STRUCTURIZR_WORKSPACE_ID)%'
+            - '%env(STRUCTURIZR_API_KEY)%'
+            - '%env(STRUCTURIZR_API_SECRET)%'

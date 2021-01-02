@@ -4,5 +4,5 @@ namespace App\Application\System;
 
 interface CommandBusInterface
 {
-    public function handle(Command $command): void;
+    public function dispatch(Command $command): void;
 }

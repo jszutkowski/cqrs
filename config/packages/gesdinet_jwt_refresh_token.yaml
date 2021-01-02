@@ -1,0 +1,5 @@
+gesdinet_jwt_refresh_token:
+  ttl: 3600
+  firewall: api
+  token_parameter_name: refresh_token
+  single_use: true

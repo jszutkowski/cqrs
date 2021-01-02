@@ -1,5 +1,5 @@
-
 ###> symfony/framework-bundle ###
+/.env
 /.env.local
 /.env.local.php
 /.env.*.local
@@ -9,3 +9,13 @@
 /vendor/
 ###< symfony/framework-bundle ###
 /.idea/
+/frontend/node_modules
+/frontend/.env
+/frontend/yarn-error.log
+/sockets/node_modules
+
+###> friendsofphp/php-cs-fixer ###
+/.php_cs
+/.php_cs.cache
+###< friendsofphp/php-cs-fixer ###
+/sockets/yarn-error.log

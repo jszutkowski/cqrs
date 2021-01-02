@@ -1,17 +1,11 @@
-FROM node:15.5-buster
+FROM node:15.3.0-buster
 
 WORKDIR /app/
 
-# Install dependencies
-# COPY package.json yarn.lock /app/
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+RUN apt-get update -y
+RUN apt-get install -y apt-transport-https ca-certificates
+RUN apt-get install -y yarn
 
-# RUN npm install
-
-# Add rest of the client code
-#COPY . /app/
-
-#RUN npm install --unsafe-perm -g sass-loader node-sass
-
-EXPOSE 3000
-
-# CMD npm start
+EXPOSE 8080

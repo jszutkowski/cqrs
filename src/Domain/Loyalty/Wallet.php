@@ -1,17 +1,16 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Domain\Loyalty;
 
-
 use App\Domain\Event;
-use App\Domain\EventSourcing\AbstractAggregateRoot;
+use App\Domain\EventSourcing\AbstractAggregate;
 use App\Domain\Exception\DomainException;
 use App\Domain\Loyalty\Events\PointsAdded;
-use App\Domain\Loyalty\Events\PointsWithdrawn;
 use App\Domain\Loyalty\Events\WalletCreated;
 
-class Wallet extends AbstractAggregateRoot
+class Wallet extends AbstractAggregate
 {
     /**
      * @var Points[]
@@ -19,8 +18,6 @@ class Wallet extends AbstractAggregateRoot
     private array $points = [];
 
     /**
-     * @param string $id
-     * @return static
      * @throws DomainException
      */
     public static function create(string $id): self
@@ -34,7 +31,7 @@ class Wallet extends AbstractAggregateRoot
 
     /**
      * @param Event[] $events
-     * @return static
+     *
      * @throws DomainException
      */
     public static function fromEvents(array $events): self
@@ -49,46 +46,27 @@ class Wallet extends AbstractAggregateRoot
         return $wallet;
     }
 
+    /**
+     * @throws DomainException
+     */
     public function addPoints(Points $points): void
     {
-        $this->recordThat(new PointsAdded($this->aggregateRootId, $points));
-    }
-
-    public function withdrawPoints(Points $points): void
-    {
-        $this->recordThat(new PointsWithdrawn($this->aggregateRootId, $points));
+        $this->recordThat(new PointsAdded($this->aggregateId, $points));
     }
 
     /**
-     * @return Points
-     */
-    public function getBalance(): Points
-    {
-        $points = array_reduce($this->points, static function(int $sum, Points $points) {
-            return $sum + $points->getAmount();
-        }, 0);
-
-        return new Points($points);
-    }
-
-    /**
-     * @param Event $event
      * @throws DomainException
      */
     protected function handle(Event $event): void
     {
         switch (get_class($event)) {
             case WalletCreated::class:
-                /** @var $event WalletCreated */
-                $this->aggregateRootId = $event->getId();
+                /* @var WalletCreated $event */
+                $this->aggregateId = $event->getAggregateId();
                 break;
             case PointsAdded::class:
-                /** @var $event PointsAdded */
+                /* @var PointsAdded $event */
                 $this->points[] = $event->getPoints();
-                break;
-            case PointsWithdrawn::class:
-                /** @var $event PointsWithdrawn */
-                $this->points[] = new Points($this->getBalance()->getAmount() - $event->getPoints()->getAmount());
                 break;
             default:
                 throw new DomainException(sprintf('Unsupported event to handle: %s', get_class($event)));

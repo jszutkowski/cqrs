@@ -2,18 +2,17 @@
 
 namespace App\Domain\Loyalty;
 
-
 class Points
 {
-    private int $amo;
+    private int $amount;
 
     public function __construct(int $amount)
     {
-        $this->amo = $amount;
+        $this->amount = $amount;
     }
 
     public function getAmount(): int
     {
-        return $this->amo;
+        return $this->amount;
     }
 }

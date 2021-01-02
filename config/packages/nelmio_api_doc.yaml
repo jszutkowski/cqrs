@@ -1,0 +1,74 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: CQRS Application
+            description: This is CQRS sandbox
+            version: 1.0.0
+        securityDefinitions:
+            Bearer:
+                type: apiKey
+                description: 'Value: Bearer {jwt}'
+                name: Authorization
+                in: header
+        security:
+            - Bearer: []
+        paths:
+            /api/auth/login:
+                post:
+                    tags:
+                        - Login
+                    description: Login into the api.
+                    produces:
+                        - application/json
+                    parameters:
+                        - name: user
+                          description: Log in
+                          in: body
+                          required: true
+                          schema:
+                              type: object
+                              properties:
+                                  username:
+                                      type: string
+                                  password:
+                                      type: string
+                    responses:
+                        '200':
+                            description: Successful login
+                            schema:
+                                type: object
+                                properties:
+                                    token:
+                                        type: string
+                                    refresh_token:
+                                        type: string
+            /api/auth/refresh-token:
+                post:
+                    tags:
+                        - Login
+                    description: Refresh token
+                    produces:
+                        - application/json
+                    parameters:
+                        - name: Refresh token
+                          description: Refresh token
+                          in: body
+                          required: true
+                          schema:
+                              type: object
+                              properties:
+                                  refresh_token:
+                                      type: string
+                    responses:
+                        '200':
+                            description: Refresh token generated successfully
+                            schema:
+                                type: object
+                                properties:
+                                    token:
+                                        type: string
+                                    refresh_token:
+                                        type: string
+    areas:
+        path_patterns:
+            - ^/api/wallet

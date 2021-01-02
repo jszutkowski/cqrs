@@ -1,0 +1,7 @@
+# See https://github.com/snc/SncRedisBundle/blob/master/Resources/doc/index.md for instructions
+snc_redis:
+    clients:
+        default:
+            type: predis
+            alias: default
+            dsn: "%env(REDIS_URL)%"

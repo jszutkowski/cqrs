@@ -1,0 +1,38 @@
+framework:
+    messenger:
+        # Uncomment this (and the failed transport below) to send failed messages to this transport for later handling.
+        # failure_transport: failed
+
+        default_bus: bus_command
+        failure_transport: failed
+        buses:
+            bus_command:
+                middleware:
+                    - App\Infrastructure\Middleware\CommandHandlerExceptionMiddleware
+                    - App\Infrastructure\Middleware\TransactionMiddleware
+            bus_event_stream: ~
+
+        transports:
+            # https://symfony.com/doc/current/messenger.html#transport-configuration
+#            command: 'sync:///?queue_name=commands'
+#            event_stream: 'sync:///?queue_name=event_streams'
+            command:
+                dsn: '%env(MESSENGER_TRANSPORT_COMMAND_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+                    max_delay: 0
+            event_stream:
+                dsn: '%env(MESSENGER_TRANSPORT_EVENT_STREAM_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+                    max_delay: 0
+            failed: 'doctrine://default?queue_name=failed'
+
+        routing:
+            'App\Application\Command\CreateWallet': command
+            'App\Application\Command\AddPoints': command
+            'App\Domain\EventSourcing\DomainEventsStream': event_stream

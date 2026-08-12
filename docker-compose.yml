@@ -1,125 +1,124 @@
-version: "3.4"
-
 volumes:
-  mysql: ~
+  mysql-data: ~
+  rabbitmq-data: ~
+
 
 services:
   php:
-    restart: "no"
     build:
-      context: "./"
-      dockerfile: "./docker/php/Dockerfile"
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "-S", "0.0.0.0:8080", "-t", "public"]
     volumes:
-      - ".:/app"
-    command: "php -S 0.0.0.0:80 -t public -c .docker/php/php.ini"
+      - .:/app
     ports:
-      - "80:80"
+      - "${APP_PORT:-8080}:8080"
     environment:
-      DATABASE_URL: "mysql://root:rootpassword@mysql:3306/main"
-      APP_ENV: "dev"
+      APP_ENV: dev
     depends_on:
-      - redis
-      - mysql
-      - rabbitmq
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
-  consumer_command:
+  consumer-command:
     build:
-      context: "./"
-      dockerfile: "./docker/php/Dockerfile"
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "bin/console", "messenger:consume", "command", "-vv"]
+    restart: unless-stopped
     volumes:
-      - ".:/app"
-    restart: always
-    command: ['/app/bin/console', 'messenger:consume', 'command', '-vv']
+      - .:/app
     environment:
-      DATABASE_URL: "mysql://user:password@mysql:3306/main"
+      APP_ENV: dev
     depends_on:
-      - redis
-      - mysql
-      - rabbitmq
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
-  consumer_event_stream:
+  consumer-event-stream:
     build:
-      context: "./"
-      dockerfile: "./docker/php/Dockerfile"
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "bin/console", "messenger:consume", "event_stream", "-vv"]
+    restart: unless-stopped
     volumes:
-      - ".:/app"
-    restart: always
-    command: ['/app/bin/console', 'messenger:consume', 'event_stream', '-vv']
+      - .:/app
     environment:
-      DATABASE_URL: "mysql://user:password@mysql:3306/main"
+      APP_ENV: dev
     depends_on:
-      - redis
-      - mysql
-      - rabbitmq
-
-  frontend:
-    restart: "no"
-    build:
-      context: "./"
-      dockerfile: "./docker/frontend/Dockerfile"
-    command: "sh -c 'yarn install && yarn start'"
-    volumes:
-      - ./frontend:/app
-    ports:
-      - "8080:8080"
-    environment:
-      - NODE_ENV=development
-      - REDIS_URL=tcp://redis:6379
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   mysql:
-    image: "mysql:5.7"
-    expose:
-      - "3306"
-    ports:
-      - "3306:3306"
-    volumes:
-      - "mysql:/var/lib/mysql"
+    image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: "rootpassword"
-      MYSQL_DATABASE: "main"
-      MYSQL_USER: "user"
-      MYSQL_PASSWORD: "password"
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: main
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "${MYSQL_PORT:-33061}:3306"
     healthcheck:
-      test: "mysqladmin ping -h localhost -P 3306 -u $${MYSQL_USER} -p$${MYSQL_PASSWORD}"
-      interval: 2s
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-prootpassword"]
+      interval: 5s
       timeout: 5s
-      retries: 15
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  redis:
+    image: redis:8
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   sockets:
-    restart: "no"
-    build:
-      context: "./"
-      dockerfile: "./docker/sockets/Dockerfile"
-    command: "sh -c 'yarn install && node app.js'"
+    image: node:22-alpine
+    working_dir: /app
+    command: ["sh", "-c", "npm install && node app.js"]
     volumes:
       - ./sockets:/app
     ports:
-      - "5000:5000"
+      - "${SOCKETS_PORT:-3001}:3001"
     environment:
-      - REDIS__HOST=redis
-      - REDIS__PORT=6379
+      REDIS_URL: redis://redis:6379
+      PORT: "3001"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
-  redis:
-    restart: "no"
-    image: redis
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+    volumes:
+      - ./frontend:/app
     ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 2s
-      timeout: 5s
-      retries: 15
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      VITE_API_URL: http://localhost:${APP_PORT:-8080}
+      VITE_SOCKETS_URL: http://localhost:${SOCKETS_PORT:-3001}
 
-  rabbitmq:
-    restart: "no"
-    image: "rabbitmq:3.8.11-management"
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    healthcheck:
-      test: "/opt/rabbitmq/sbin/rabbitmqctl status"
-      interval: 2s
-      timeout: 5s
-      retries: 15

@@ -3,19 +3,36 @@
 /.env.local
 /.env.local.php
 /.env.*.local
-/config/secrets/prod/prod.decrypt.private.php
 /public/bundles/
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
-/.idea/
-/frontend/node_modules
-/frontend/.env
-/frontend/yarn-error.log
-/sockets/node_modules
+
+###> lexik/jwt-authentication-bundle ###
+/config/jwt/*.pem
+/config/jwt/*.pub
+###< lexik/jwt-authentication-bundle ###
 
 ###> friendsofphp/php-cs-fixer ###
-/.php_cs
-/.php_cs.cache
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
 ###< friendsofphp/php-cs-fixer ###
-/sockets/yarn-error.log
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache
+###< phpunit/phpunit ###
+
+###> phpstan/phpstan ###
+/phpstan.neon
+###< phpstan/phpstan ###
+
+# Node
+/frontend/node_modules/
+/frontend/dist/
+/sockets/node_modules/
+
+# Editors
+/.idea/
+/.vscode/
+.DS_Store

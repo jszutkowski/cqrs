@@ -1,11 +1,5 @@
-module.exports = {
-    env: process.env.ENVIRONMENT__TAG || 'local',
-    redis: {
-        host: process.env.REDIS__HOST || '127.0.0.1',
-        port: process.env.REDIS__PORT || 6379
-    },
-    socket: {
-        host: process.env.SOCKET__HOST || '127.0.0.1',
-        port: process.env.SOCKET__INTERNAL__PORT || 5000
-    },
+export const config = {
+  redisUrl: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
+  port: Number(process.env.PORT || 3001),
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
 };

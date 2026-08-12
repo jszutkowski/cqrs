@@ -1,41 +1,42 @@
 security:
-    encoders:
-        Symfony\Component\Security\Core\User\User: bcrypt
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
     providers:
-        my_in_memory_users:
+        users_in_memory:
             memory:
                 users:
-                    admin: { password: $2y$13$hA/l.ZYwcmAnxoZbfJtPdeFrWhrpmbnkYeWafMZR7vb1ilo5wOt5., roles: [ 'ROLE_ADMIN' ] }
+                    # Demo credentials: admin / admin1 (documented in README).
+                    admin:
+                        password: '$2y$13$hA/l.ZYwcmAnxoZbfJtPdeFrWhrpmbnkYeWafMZR7vb1ilo5wOt5.'
+                        roles: ['ROLE_ADMIN']
 
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-
-        api_doc:
-            pattern: ^/api/doc
+        login:
+            pattern: ^/api/login
             stateless: true
-            anonymous: true
-
-        api_auth:
-            pattern: ^/api/auth
-            stateless: true
-            anonymous: true
             json_login:
-                provider: my_in_memory_users
-                check_path: /api/auth/login
+                check_path: /api/login
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
-
         api:
-            pattern:   ^/api
+            pattern: ^/api
             stateless: true
-            guard:
-                authenticators:
-                    - lexik_jwt_authentication.jwt_token_authenticator
+            jwt: ~
 
     access_control:
-        - { path: ^/api/auth, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/api/doc, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/api,      roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/doc, roles: PUBLIC_ACCESS }
+        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+when@test:
+    security:
+        password_hashers:
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4
+                time_cost: 3
+                memory_cost: 10

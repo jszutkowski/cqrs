@@ -1,46 +1,61 @@
-FROM php:7.4-buster
+# syntax=docker/dockerfile:1
 
-ENV SERVER_NAME='app.dev'
+##
+## base — PHP 8.5 with the extensions the application needs at runtime.
+##
+FROM php:8.5-cli AS base
 
-RUN apt-get -y update \
-    && apt-get -y --no-install-recommends install \
-    nano \
-    mc \
-    git \
-    zip \
-    unzip \
-    software-properties-common \
-    wget \
-    bash \
-    openssl \
-    curl \
-    libtool \
-    make \
-    g++ \
-    autoconf \
-    perl \
-    libmcrypt-dev \
-    libpng-dev \
-    sqlite3 \
-    librabbitmq-dev
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        librabbitmq-dev \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install pdo_mysql
-
-RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
-    && php composer-setup.php \
-    && mv composer.phar /usr/bin/composer \
-    && php -r "unlink('composer-setup.php');"
-
-RUN pecl install xdebug-2.9.8 \
-    && docker-php-ext-enable xdebug
-
-RUN pecl install amqp \
+RUN docker-php-ext-install pdo_mysql \
+    && pecl install amqp \
     && docker-php-ext-enable amqp
 
 COPY docker/php/php.ini /usr/local/etc/php/php.ini
-COPY docker/php/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-
-EXPOSE 80
-EXPOSE 9000
 
 WORKDIR /app
+
+##
+## dev — adds Composer and PCOV (coverage); the code is volume-mounted.
+##
+FROM base AS dev
+
+RUN pecl install pcov \
+    && docker-php-ext-enable pcov
+
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+RUN useradd --create-home --uid 1000 app
+USER app
+
+##
+## prod — self-contained image with vendors and source, no dev tooling.
+##
+FROM base AS prod
+
+ENV APP_ENV=prod
+
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install --no-dev --no-scripts --prefer-dist --no-progress
+
+COPY bin ./bin
+COPY config ./config
+COPY public ./public
+COPY src ./src
+COPY migrations ./migrations
+COPY .env ./
+
+RUN composer dump-autoload --optimize --classmap-authoritative
+
+RUN useradd --create-home --uid 1000 app \
+    && chown -R app:app /app/var || true
+USER app
+
+CMD ["php", "-S", "0.0.0.0:8080", "-t", "public"]

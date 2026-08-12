@@ -1,7 +1,7 @@
-api_controllers:
-  resource: '../src/UI/Controller/'
-  type: annotation
+controllers:
+    resource: ../src/
+    type: attribute
 
-gesdinet_jwt_refresh_token:
-  path:       /api/auth/refresh-token
-  controller: gesdinet.jwtrefreshtoken::refresh
+api_login:
+    path: /api/login
+    methods: POST

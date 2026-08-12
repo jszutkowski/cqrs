@@ -1,80 +1,45 @@
-# This file is the entry point to configure your own services.
-# Files in the packages/ subdirectory configure your dependencies.
-
-# Put parameters here that don't need to change on each machine where the app is deployed
-# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
-parameters:
-
 services:
     _defaults:
-        autowire: true      # Automatically injects dependencies in your services.
-        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        autowire: true
+        autoconfigure: true
 
-    App\Infrastructure\:
-        resource: '../src/Infrastructure/'
+    App\:
+        resource: '../src/'
         exclude:
-            - '../src/Infrastructure/DoctrineMigrations/'
+            - '../src/Kernel.php'
+            # The domain layer holds no services — aggregates, value objects and
+            # events are constructed by application code, never by the container.
+            - '../src/*/Domain/'
+            - '../src/Shared/Domain/'
 
-    App\UI\Controller\:
-        resource: '../src/UI/Controller/'
-        tags: ['controller.service_arguments']
-
-    App\UI\Command\:
-        resource: '../src/UI/Command/'
-        tags: ['console.command']
-
-    json_serializer:
-        class: Symfony\Component\Serializer\SerializerInterface
-        factory: ['App\Infrastructure\Serializer\SerializerFactory', 'createJsonSerializer']
-
-
-    ##### APPLICATION #####
-
-    command_handlers:
-        namespace: App\Application\CommandHandler\
-        resource: '%kernel.project_dir%/src/Application/CommandHandler/**'
-        tags: [{name: messenger.message_handler, bus: bus_command}]
-
-    ##### INFRASTRUCTURE #####
-
-    App\Infrastructure\System\CommandBus:
+    Predis\ClientInterface:
+        class: Predis\Client
         arguments:
-            - '@bus_command'
+            $parameters: '%env(REDIS_URL)%'
 
-    App\Infrastructure\System\EventStreamBus:
+    # Names under which domain events live in the stream. Decoupled from the PHP
+    # class names on purpose: renaming a class must never invalidate history.
+    App\Shared\Infrastructure\EventStore\EventNameRegistry:
         arguments:
-            - '@bus_event_stream'
+            $classesByName:
+                wallet_created: 'App\Loyalty\Domain\Wallet\Event\WalletCreated'
+                points_added: 'App\Loyalty\Domain\Wallet\Event\PointsAdded'
+                points_withdrawn: 'App\Loyalty\Domain\Wallet\Event\PointsWithdrawn'
+                points_refunded: 'App\Loyalty\Domain\Wallet\Event\PointsRefunded'
+                transfer_initiated: 'App\Loyalty\Domain\Transfer\Event\TransferInitiated'
+                transfer_completed: 'App\Loyalty\Domain\Transfer\Event\TransferCompleted'
+                transfer_failed: 'App\Loyalty\Domain\Transfer\Event\TransferFailed'
 
-    App\Infrastructure\EventStore\MySqlEventStore:
+    App\Shared\Infrastructure\EventStore\DbalEventStore:
         arguments:
-            $serializer: '@json_serializer'
-            $tableName: 'event_store'
+            $tableName: 'events'
 
-    App\Infrastructure\Notifier\RedisNotifier:
-        arguments:
-            - '@snc_redis.default'
-            - '@logger'
-
-    App\Infrastructure\ReadModel\Projection\MySqlProjection:
-        tags: [{name: messenger.message_handler, bus: bus_event_stream}]
-
-    App\Infrastructure\EventListener\ProjectionUpdatedListener:
-        tags:
-            - { name: kernel.event_listener, event: !php/const App\Infrastructure\EventListener\ProjectionUpdated::EVENT_NAME, method: onEventsApplied }
-
-    ##### INTERFACES #####
-    App\Application\System\CommandBusInterface: '@App\Infrastructure\System\CommandBus'
-    App\Application\System\EventStreamBusInterface: '@App\Infrastructure\System\EventStreamBus'
-    App\Application\Notifier\NotifierInterface: '@App\Infrastructure\Notifier\RedisNotifier'
-
-    App\Domain\Loyalty\WalletsRepository: '@App\Infrastructure\Repository\EventSourcedWalletsRepository'
-
-    App\Domain\EventSourcing\EventStoreInterface: '@App\Infrastructure\EventStore\MySqlEventStore'
-    App\Domain\EventSourcing\ProjectionInterface: '@App\Infrastructure\ReadModel\Projection\MySqlProjection'
-
-    ##### UI #####
-    App\UI\Command\GenerateC4ModelCommand:
-        arguments:
-            - '%env(STRUCTURIZR_WORKSPACE_ID)%'
-            - '%env(STRUCTURIZR_API_KEY)%'
-            - '%env(STRUCTURIZR_API_SECRET)%'
+    App\Shared\Domain\EventSourcing\EventStore: '@App\Shared\Infrastructure\EventStore\DbalEventStore'
+    App\Loyalty\Domain\Wallet\Wallets: '@App\Loyalty\Infrastructure\Repository\EventSourcedWallets'
+    App\Loyalty\Domain\Transfer\Transfers: '@App\Loyalty\Infrastructure\Repository\EventSourcedTransfers'
+    App\Shared\Application\Notification\Notifier: '@App\Shared\Infrastructure\Notification\RedisNotifier'
+    App\Shared\Application\Command\CommandBus: '@App\Shared\Infrastructure\Bus\MessengerCommandBus'
+    App\Shared\Application\Event\EventBus: '@App\Shared\Infrastructure\Bus\MessengerEventBus'
+    App\Shared\Application\Event\ProcessEventBus: '@App\Shared\Infrastructure\Bus\MessengerProcessEventBus'
+    App\Loyalty\Application\ReadModel\WalletReadModel: '@App\Loyalty\Infrastructure\ReadModel\DbalWalletReadModel'
+    App\Loyalty\Application\ReadModel\TransferReadModel: '@App\Loyalty\Infrastructure\ReadModel\DbalTransferReadModel'

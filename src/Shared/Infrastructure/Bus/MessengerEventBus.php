@@ -22,7 +22,7 @@ final readonly class MessengerEventBus implements EventBus
 
     /**
      * The stamp holds each event back until the command currently being handled
-     * finishes and its transaction commits. Without it a projection could read
+     * finishes and its transaction commits. Without it a projector could read
      * state that a later failure rolls back.
      */
     public function publish(DomainEvent ...$events): void

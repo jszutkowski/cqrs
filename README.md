@@ -5,7 +5,7 @@ and points can be transferred between wallets by a **saga (process manager)** th
 compensates when a step fails.
 
 The interesting part is not the CRUD — it is what sits underneath: a hand-written event
-store with optimistic locking, asynchronous projections driving a separate read model,
+store with optimistic locking, asynchronous projectors driving a separate read model,
 and a long-running business process spanning three aggregates without a distributed
 transaction.
 
@@ -102,7 +102,7 @@ flowchart LR
 ```
 
 Events reach the event bus only **after** the surrounding transaction commits
-(`DispatchAfterCurrentBusStamp`), so a projection can never observe state that a later
+(`DispatchAfterCurrentBusStamp`), so a projector can never observe state that a later
 failure rolls back.
 
 ### The transfer saga
@@ -167,7 +167,7 @@ make check
 | Suite | Scope |
 |---|---|
 | `Unit` | Aggregates (given events → when command → then events), value objects, the saga wired in-process |
-| `Integration` | Real MySQL: event store round trip, optimistic-locking conflict, projections |
+| `Integration` | Real MySQL: event store round trip, optimistic-locking conflict, projectors |
 | `Functional` | Real HTTP: auth, validation, the full transfer saga end to end |
 
 Every use case has a happy path and at least one negative case — insufficient points,

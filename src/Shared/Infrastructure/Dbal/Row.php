@@ -9,7 +9,7 @@ namespace App\Shared\Infrastructure\Dbal;
  *
  * DBAL hands back array<string, mixed>, so every read site would otherwise cast
  * blindly. Casting is not the problem — casting *silently* is: a renamed column
- * arrives as null and turns into 0 or an empty string, and the projection looks
+ * arrives as null and turns into 0 or an empty string, and the projector looks
  * healthy while producing wrong numbers. These readers fail instead.
  */
 final readonly class Row

@@ -29,7 +29,7 @@ when@test:
     framework:
         messenger:
             # Handled inline so a functional test drives the real chain —
-            # command, aggregate, event store, projection — without a worker.
+            # command, aggregate, event store, projector — without a worker.
             transports:
                 command: 'sync://'
                 event_stream: 'sync://'

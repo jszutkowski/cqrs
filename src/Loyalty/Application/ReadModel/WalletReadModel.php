@@ -6,7 +6,7 @@ namespace App\Loyalty\Application\ReadModel;
 
 /**
  * Read side port. Deliberately not a repository: it never returns aggregates,
- * only flat views built by the projections, and it is queried synchronously.
+ * only flat views built by the projectors, and it is queried synchronously.
  */
 interface WalletReadModel
 {

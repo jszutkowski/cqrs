@@ -23,9 +23,9 @@ abstract class IntegrationTestCase extends KernelTestCase
     }
 
     /**
-     * Every test starts from an empty database: projections and event streams
-     * are append-only, so leftovers from a previous test would quietly change
-     * the outcome of the next one.
+     * Every test starts from an empty database: event streams are append-only and
+     * the read models accumulate, so leftovers from a previous test would quietly
+     * change the outcome of the next one.
      */
     private function resetSchema(): void
     {

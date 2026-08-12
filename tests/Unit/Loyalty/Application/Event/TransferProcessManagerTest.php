@@ -9,6 +9,8 @@ use App\Loyalty\Application\Command\DepositPoints;
 use App\Loyalty\Application\Command\FailTransfer;
 use App\Loyalty\Application\Command\RefundPoints;
 use App\Loyalty\Application\Command\WithdrawPoints;
+use App\Loyalty\Application\Event\TransferCreditRejected;
+use App\Loyalty\Application\Event\TransferDebitRejected;
 use App\Loyalty\Application\Event\TransferProcessManager;
 use App\Loyalty\Application\Exception\TransferDoesNotExist;
 use App\Loyalty\Domain\Transfer\Event\TransferInitiated;
@@ -174,6 +176,55 @@ final class TransferProcessManagerTest extends TestCase
 
         self::assertCount(1, $settlements);
         self::assertSame(TransferStatus::Completed, $harness->transfer($transferId)->status());
+    }
+
+    #[Test]
+    public function it_settles_a_rejected_debit_without_compensating(): void
+    {
+        $commandBus = new RecordingCommandBus();
+        $processManager = new TransferProcessManager(new InMemoryTransfers(), $commandBus);
+        $transferId = TransferId::generate();
+
+        $processManager->onTransferDebitRejected(
+            new TransferDebitRejected($transferId->value, 'Insufficient points'),
+        );
+
+        $fail = $commandBus->firstOf(FailTransfer::class);
+
+        self::assertInstanceOf(FailTransfer::class, $fail);
+        self::assertSame($transferId->value, $fail->transferId);
+        self::assertSame('Insufficient points', $fail->reason);
+        self::assertNull(
+            $commandBus->firstOf(RefundPoints::class),
+            'Nothing left the source wallet, so there is nothing to refund.',
+        );
+    }
+
+    #[Test]
+    public function it_refunds_before_settling_a_rejected_credit(): void
+    {
+        $commandBus = new RecordingCommandBus();
+        $processManager = new TransferProcessManager(new InMemoryTransfers(), $commandBus);
+        $transferId = TransferId::generate();
+        $source = WalletId::generate();
+
+        $processManager->onTransferCreditRejected(new TransferCreditRejected(
+            $transferId->value,
+            $source->value,
+            140,
+            'Wallet does not exist',
+        ));
+
+        $dispatched = $commandBus->dispatchedCommands();
+
+        self::assertInstanceOf(RefundPoints::class, $dispatched[0]);
+        self::assertSame($source->value, $dispatched[0]->walletId);
+        self::assertSame(140, $dispatched[0]->points);
+        self::assertInstanceOf(
+            FailTransfer::class,
+            $dispatched[1],
+            'The refund must be ordered before the transfer is marked failed.',
+        );
     }
 
     private function now(): \DateTimeImmutable

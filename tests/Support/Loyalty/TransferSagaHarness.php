@@ -20,6 +20,8 @@ use App\Loyalty\Application\Command\RefundPoints;
 use App\Loyalty\Application\Command\RefundPointsHandler;
 use App\Loyalty\Application\Command\WithdrawPoints;
 use App\Loyalty\Application\Command\WithdrawPointsHandler;
+use App\Loyalty\Application\Event\TransferCreditRejected;
+use App\Loyalty\Application\Event\TransferDebitRejected;
 use App\Loyalty\Application\Event\TransferProcessManager;
 use App\Loyalty\Domain\Transfer\Event\TransferInitiated;
 use App\Loyalty\Domain\Transfer\Transfer;
@@ -29,10 +31,10 @@ use App\Loyalty\Domain\Wallet\Event\PointsWithdrawn;
 use App\Loyalty\Domain\Wallet\WalletId;
 use App\Shared\Application\Command\Command;
 use App\Shared\Application\Command\CommandBus;
-use App\Shared\Domain\EventSourcing\DomainEvent;
 use App\Tests\Support\Loyalty\Stub\InMemoryTransfers;
 use App\Tests\Support\Loyalty\Stub\InMemoryWallets;
 use App\Tests\Support\Shared\Stub\QueueingEventBus;
+use App\Tests\Support\Shared\Stub\QueueingProcessEventBus;
 use Symfony\Component\Clock\MockClock;
 
 /**
@@ -56,6 +58,7 @@ final class TransferSagaHarness implements CommandBus
     private array $handled = [];
 
     private readonly QueueingEventBus $eventBus;
+    private readonly QueueingProcessEventBus $processEvents;
     private readonly InMemoryWallets $wallets;
     private readonly InMemoryTransfers $transfers;
     private readonly TransferProcessManager $processManager;
@@ -64,6 +67,7 @@ final class TransferSagaHarness implements CommandBus
     public function __construct()
     {
         $this->eventBus = new QueueingEventBus();
+        $this->processEvents = new QueueingProcessEventBus();
         $this->wallets = new InMemoryWallets($this->eventBus);
         $this->transfers = new InMemoryTransfers($this->eventBus);
         $this->clock = new MockClock('2026-01-01 12:00:00');
@@ -83,7 +87,7 @@ final class TransferSagaHarness implements CommandBus
     {
         $safetyLimit = 50;
 
-        while ([] !== $this->pending || !$this->eventBus->isEmpty()) {
+        while ([] !== $this->pending || !$this->eventBus->isEmpty() || !$this->processEvents->isEmpty()) {
             if (--$safetyLimit < 0) {
                 throw new \RuntimeException('The saga did not settle; it is looping.');
             }
@@ -96,7 +100,7 @@ final class TransferSagaHarness implements CommandBus
                 continue;
             }
 
-            $event = $this->eventBus->drain();
+            $event = $this->eventBus->drain() ?? $this->processEvents->drain();
 
             if (null !== $event) {
                 $this->react($event);
@@ -171,8 +175,8 @@ final class TransferSagaHarness implements CommandBus
             $command instanceof CreateWallet => (new CreateWalletHandler($this->wallets, $this->clock))($command),
             $command instanceof AddPoints => (new AddPointsHandler($this->wallets, $this->clock))($command),
             $command instanceof InitiateTransfer => (new InitiateTransferHandler($this->transfers, $this->clock))($command),
-            $command instanceof WithdrawPoints => (new WithdrawPointsHandler($this->wallets, $this, $this->clock))($command),
-            $command instanceof DepositPoints => (new DepositPointsHandler($this->wallets, $this, $this->clock))($command),
+            $command instanceof WithdrawPoints => (new WithdrawPointsHandler($this->wallets, $this->processEvents, $this->clock))($command),
+            $command instanceof DepositPoints => (new DepositPointsHandler($this->wallets, $this->processEvents, $this->clock))($command),
             $command instanceof RefundPoints => (new RefundPointsHandler($this->wallets, $this->clock))($command),
             $command instanceof CompleteTransfer => (new CompleteTransferHandler($this->transfers, $this->clock))($command),
             $command instanceof FailTransfer => (new FailTransferHandler($this->transfers, $this->clock))($command),
@@ -180,12 +184,14 @@ final class TransferSagaHarness implements CommandBus
         };
     }
 
-    private function react(DomainEvent $event): void
+    private function react(object $event): void
     {
         match (true) {
             $event instanceof TransferInitiated => $this->processManager->onTransferInitiated($event),
             $event instanceof PointsWithdrawn => $this->processManager->onPointsWithdrawn($event),
             $event instanceof PointsAdded => $this->processManager->onPointsAdded($event),
+            $event instanceof TransferDebitRejected => $this->processManager->onTransferDebitRejected($event),
+            $event instanceof TransferCreditRejected => $this->processManager->onTransferCreditRejected($event),
             default => null,
         };
     }

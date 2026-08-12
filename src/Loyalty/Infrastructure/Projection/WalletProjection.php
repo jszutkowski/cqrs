@@ -10,6 +10,7 @@ use App\Loyalty\Domain\Wallet\Event\PointsAdded;
 use App\Loyalty\Domain\Wallet\Event\PointsRefunded;
 use App\Loyalty\Domain\Wallet\Event\PointsWithdrawn;
 use App\Loyalty\Domain\Wallet\Event\WalletCreated;
+use App\Shared\Application\Bus\MessageBus;
 use App\Shared\Application\Notification\Notification;
 use App\Shared\Application\Notification\Notifier;
 use App\Shared\Domain\EventSourcing\DomainEvent;
@@ -33,7 +34,7 @@ final readonly class WalletProjection
     ) {
     }
 
-    #[AsMessageHandler(bus: 'event.bus')]
+    #[AsMessageHandler(bus: MessageBus::EVENT)]
     public function projectWalletCreated(WalletCreated $event): void
     {
         $this->connection->executeStatement(
@@ -48,19 +49,19 @@ final readonly class WalletProjection
         ));
     }
 
-    #[AsMessageHandler(bus: 'event.bus')]
+    #[AsMessageHandler(bus: MessageBus::EVENT)]
     public function projectPointsAdded(PointsAdded $event): void
     {
         $this->applyBalanceChange($event, $event->points, $event->transferId);
     }
 
-    #[AsMessageHandler(bus: 'event.bus')]
+    #[AsMessageHandler(bus: MessageBus::EVENT)]
     public function projectPointsWithdrawn(PointsWithdrawn $event): void
     {
         $this->applyBalanceChange($event, -$event->points, $event->transferId);
     }
 
-    #[AsMessageHandler(bus: 'event.bus')]
+    #[AsMessageHandler(bus: MessageBus::EVENT)]
     public function projectPointsRefunded(PointsRefunded $event): void
     {
         $this->applyBalanceChange($event, $event->points, $event->transferId);

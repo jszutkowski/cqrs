@@ -10,10 +10,11 @@ use App\Loyalty\Domain\Wallet\Exception\WalletNotFound;
 use App\Loyalty\Domain\Wallet\Points;
 use App\Loyalty\Domain\Wallet\WalletId;
 use App\Loyalty\Domain\Wallet\Wallets;
+use App\Shared\Application\Bus\MessageBus;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler(bus: 'command.bus')]
+#[AsMessageHandler(bus: MessageBus::COMMAND)]
 final readonly class RefundPointsHandler
 {
     public function __construct(

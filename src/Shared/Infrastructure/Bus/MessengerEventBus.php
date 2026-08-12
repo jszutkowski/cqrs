@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Infrastructure\Bus;
 
+use App\Shared\Application\Bus\MessageBus;
 use App\Shared\Application\Event\EventBus;
 use App\Shared\Domain\EventSourcing\DomainEvent;
 use Symfony\Component\DependencyInjection\Attribute\Target;
@@ -14,7 +15,7 @@ use Symfony\Component\Messenger\Stamp\DispatchAfterCurrentBusStamp;
 final readonly class MessengerEventBus implements EventBus
 {
     public function __construct(
-        #[Target('event.bus')]
+        #[Target(MessageBus::EVENT)]
         private MessageBusInterface $messageBus,
     ) {
     }

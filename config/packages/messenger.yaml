@@ -9,12 +9,12 @@ framework:
                 dsn: '%env(MESSENGER_TRANSPORT_EVENT_STREAM_DSN)%'
             failed: 'doctrine://default?queue_name=failed'
 
-        default_bus: command.bus
+        default_bus: !php/const App\Shared\Application\Bus\MessageBus::COMMAND
         buses:
-            command.bus:
+            !php/const App\Shared\Application\Bus\MessageBus::COMMAND:
                 middleware:
                     - App\Shared\Infrastructure\Bus\TransactionMiddleware
-            event.bus:
+            !php/const App\Shared\Application\Bus\MessageBus::EVENT:
                 default_middleware:
                     allow_no_handlers: true
                 middleware:
@@ -23,6 +23,7 @@ framework:
         routing:
             App\Shared\Application\Command\Command: command
             App\Shared\Domain\EventSourcing\DomainEvent: event_stream
+            App\Shared\Application\Event\ProcessEvent: event_stream
 
 when@test:
     framework:

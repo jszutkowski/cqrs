@@ -40,5 +40,6 @@ services:
     App\Shared\Application\Notification\Notifier: '@App\Shared\Infrastructure\Notification\RedisNotifier'
     App\Shared\Application\Command\CommandBus: '@App\Shared\Infrastructure\Bus\MessengerCommandBus'
     App\Shared\Application\Event\EventBus: '@App\Shared\Infrastructure\Bus\MessengerEventBus'
+    App\Shared\Application\Event\ProcessEventBus: '@App\Shared\Infrastructure\Bus\MessengerProcessEventBus'
     App\Loyalty\Application\ReadModel\WalletReadModel: '@App\Loyalty\Infrastructure\ReadModel\DbalWalletReadModel'
     App\Loyalty\Application\ReadModel\TransferReadModel: '@App\Loyalty\Infrastructure\ReadModel\DbalTransferReadModel'

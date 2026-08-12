@@ -9,10 +9,11 @@ use App\Loyalty\Domain\Transfer\Exception\TransferAlreadySettled;
 use App\Loyalty\Domain\Transfer\Exception\TransferNotFound;
 use App\Loyalty\Domain\Transfer\TransferId;
 use App\Loyalty\Domain\Transfer\Transfers;
+use App\Shared\Application\Bus\MessageBus;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler(bus: 'command.bus')]
+#[AsMessageHandler(bus: MessageBus::COMMAND)]
 final readonly class CompleteTransferHandler
 {
     public function __construct(

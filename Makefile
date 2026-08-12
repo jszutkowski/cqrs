@@ -8,7 +8,7 @@ PHP_TEST_CONSOLE := $(DC) run --rm -e APP_ENV=test php
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install up down logs shell db-reset test test-unit test-integration test-functional coverage cs cs-fix stan arch check
+.PHONY: help install up down logs shell warmup db-reset test test-unit test-integration test-functional coverage cs cs-fix stan arch check
 
 help: ## Show the available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -62,7 +62,10 @@ cs: ## Check the code style
 cs-fix: ## Fix the code style
 	$(PHP) composer cs:fix
 
-stan: ## Run static analysis
+warmup: ## Build the dev container dump that PHPStan reads
+	$(DC) run --rm --no-deps -e APP_ENV=dev php php bin/console cache:warmup --env=dev
+
+stan: warmup ## Run static analysis
 	$(PHP) composer stan
 
 arch: ## Verify the architecture rules

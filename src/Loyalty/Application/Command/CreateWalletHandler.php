@@ -7,10 +7,11 @@ namespace App\Loyalty\Application\Command;
 use App\Loyalty\Domain\Wallet\Wallet;
 use App\Loyalty\Domain\Wallet\WalletId;
 use App\Loyalty\Domain\Wallet\Wallets;
+use App\Shared\Application\Bus\MessageBus;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler(bus: 'command.bus')]
+#[AsMessageHandler(bus: MessageBus::COMMAND)]
 final readonly class CreateWalletHandler
 {
     public function __construct(

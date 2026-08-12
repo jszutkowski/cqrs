@@ -10,6 +10,7 @@ use App\Loyalty\Domain\Transfer\Event\TransferCompleted;
 use App\Loyalty\Domain\Transfer\Event\TransferFailed;
 use App\Loyalty\Domain\Transfer\Event\TransferInitiated;
 use App\Loyalty\Domain\Transfer\TransferStatus;
+use App\Shared\Application\Bus\MessageBus;
 use App\Shared\Application\Notification\Notification;
 use App\Shared\Application\Notification\Notifier;
 use Doctrine\DBAL\Connection;
@@ -23,7 +24,7 @@ final readonly class TransferProjection
     ) {
     }
 
-    #[AsMessageHandler(bus: 'event.bus')]
+    #[AsMessageHandler(bus: MessageBus::EVENT)]
     public function projectTransferInitiated(TransferInitiated $event): void
     {
         $this->connection->executeStatement(
@@ -41,13 +42,13 @@ final readonly class TransferProjection
         );
     }
 
-    #[AsMessageHandler(bus: 'event.bus')]
+    #[AsMessageHandler(bus: MessageBus::EVENT)]
     public function projectTransferCompleted(TransferCompleted $event): void
     {
         $this->settle($event->aggregateId, TransferStatus::Completed, null);
     }
 
-    #[AsMessageHandler(bus: 'event.bus')]
+    #[AsMessageHandler(bus: MessageBus::EVENT)]
     public function projectTransferFailed(TransferFailed $event): void
     {
         $this->settle($event->aggregateId, TransferStatus::Failed, $event->reason);

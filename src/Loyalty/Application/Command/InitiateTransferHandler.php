@@ -11,10 +11,11 @@ use App\Loyalty\Domain\Transfer\TransferId;
 use App\Loyalty\Domain\Transfer\Transfers;
 use App\Loyalty\Domain\Wallet\Points;
 use App\Loyalty\Domain\Wallet\WalletId;
+use App\Shared\Application\Bus\MessageBus;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler(bus: 'command.bus')]
+#[AsMessageHandler(bus: MessageBus::COMMAND)]
 final readonly class InitiateTransferHandler
 {
     public function __construct(

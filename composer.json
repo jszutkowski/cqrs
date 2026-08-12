@@ -86,6 +86,8 @@
         ],
         "test": "phpunit",
         "test:unit": "phpunit --testsuite=Unit",
+        "test:integration": "phpunit --testsuite=Integration",
+        "test:functional": "phpunit --testsuite=Functional",
         "coverage": "phpunit --coverage-html var/coverage",
         "cs": "php-cs-fixer fix --dry-run --diff",
         "cs:fix": "php-cs-fixer fix",

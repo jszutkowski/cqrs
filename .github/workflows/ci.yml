@@ -62,16 +62,18 @@ jobs:
       - name: Warm the dev container (PHPStan reads it)
         run: php bin/console cache:warmup --env=dev
 
+      # One step per gate rather than a single `composer check`, so a red build
+      # names the gate that failed without opening the log. The commands
+      # themselves still come from composer.json, so there is one definition of
+      # how each tool runs — CI cannot drift from what you run locally.
       - name: Code style
-        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+        run: composer cs
 
       - name: Static analysis
-        run: vendor/bin/phpstan analyse --no-progress
+        run: composer stan
 
       - name: Architecture rules
-        run: vendor/bin/phparkitect check
+        run: composer arch
 
       - name: Tests
-        env:
-          APP_ENV: test
-        run: vendor/bin/phpunit
+        run: composer test

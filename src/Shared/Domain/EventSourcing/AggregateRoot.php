@@ -36,6 +36,15 @@ abstract class AggregateRoot
 
     abstract public function aggregateId(): string;
 
+    /**
+     * Name this aggregate's stream carries in the event store.
+     *
+     * Declared by the aggregate rather than derived from the class name, for
+     * the same reason event names are: a stream outlives the namespace layout
+     * that produced it, and renaming a class must not orphan its history.
+     */
+    abstract public static function aggregateType(): string;
+
     public function committedVersion(): int
     {
         return $this->committedVersion;

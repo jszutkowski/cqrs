@@ -75,6 +75,11 @@ final class Transfer extends AggregateRoot
         $this->recordThat(new TransferFailed($this->transferId->value, $reason, $occurredAt));
     }
 
+    public static function aggregateType(): string
+    {
+        return 'transfer';
+    }
+
     public function aggregateId(): string
     {
         return $this->transferId->value;

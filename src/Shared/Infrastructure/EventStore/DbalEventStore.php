@@ -21,7 +21,7 @@ final readonly class DbalEventStore implements EventStore
     ) {
     }
 
-    public function append(string $aggregateId, DomainEventsStream $events, int $expectedVersion): void
+    public function append(string $aggregateType, string $aggregateId, DomainEventsStream $events, int $expectedVersion): void
     {
         if ($events->isEmpty()) {
             return;
@@ -36,6 +36,7 @@ final readonly class DbalEventStore implements EventStore
                 $serialized = $this->eventSerializer->serialize($event);
 
                 $this->connection->insert($this->tableName, [
+                    'aggregate_type' => $aggregateType,
                     'aggregate_id' => $aggregateId,
                     'version' => $version,
                     'event_name' => $serialized['name'],
@@ -44,23 +45,23 @@ final readonly class DbalEventStore implements EventStore
                 ]);
             }
         } catch (UniqueConstraintViolationException) {
-            // The unique index on (aggregate_id, version) is the concurrency
-            // control: another writer already claimed this version, so the
-            // aggregate this write was based on is stale.
+            // The unique index on (aggregate_type, aggregate_id, version) is the
+            // concurrency control: another writer already claimed this version,
+            // so the aggregate this write was based on is stale.
             throw ConcurrencyConflict::forAggregate($aggregateId, $expectedVersion);
         }
     }
 
-    public function load(string $aggregateId): DomainEventsStream
+    public function load(string $aggregateType, string $aggregateId): DomainEventsStream
     {
         $rows = $this->connection->fetchAllAssociative(
             <<<SQL
                 SELECT event_name, payload
                 FROM {$this->tableName}
-                WHERE aggregate_id = :aggregateId
+                WHERE aggregate_type = :aggregateType AND aggregate_id = :aggregateId
                 ORDER BY version ASC
                 SQL,
-            ['aggregateId' => $aggregateId],
+            ['aggregateType' => $aggregateType, 'aggregateId' => $aggregateId],
         );
 
         $events = array_map(

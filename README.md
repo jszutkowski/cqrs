@@ -75,7 +75,7 @@ src/
 │   │   ├── Query/                read side: queries + handlers (synchronous, no bus)
 │   │   ├── Event/                TransferProcessManager — the saga
 │   │   └── ReadModel/            read-model ports and view DTOs
-│   ├── Infrastructure/           adapters: DBAL repositories, projections, read models
+│   ├── Infrastructure/           adapters: DBAL repositories, projectors, read models
 │   └── UserInterface/            HTTP controllers, request DTOs
 └── Shared/                       shared kernel
     ├── Domain/EventSourcing/     AggregateRoot, DomainEvent, EventStore port
@@ -93,7 +93,7 @@ flowchart LR
     CH --> AGG[Wallet aggregate]
     AGG --> ES[(Event store)]
     ES -->|after commit| EB[Event bus]
-    EB --> PROJ[WalletProjection]
+    EB --> PROJ[WalletProjector]
     EB --> PM[TransferProcessManager]
     PROJ --> RM[(Read model)]
     PROJ --> REDIS[(Redis pub/sub)]

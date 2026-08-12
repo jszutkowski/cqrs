@@ -59,6 +59,11 @@ final class Wallet extends AggregateRoot
         $this->recordThat(new PointsRefunded($this->walletId->value, $points->amount, $transferId->value, $occurredAt));
     }
 
+    public static function aggregateType(): string
+    {
+        return 'wallet';
+    }
+
     public function aggregateId(): string
     {
         return $this->walletId->value;

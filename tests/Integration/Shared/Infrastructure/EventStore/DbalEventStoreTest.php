@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Shared\Infrastructure\EventStore;
 
+use App\Loyalty\Domain\Transfer\Event\TransferInitiated;
+use App\Loyalty\Domain\Transfer\Transfer;
 use App\Loyalty\Domain\Transfer\TransferId;
 use App\Loyalty\Domain\Wallet\Event\PointsAdded;
 use App\Loyalty\Domain\Wallet\Event\PointsWithdrawn;
 use App\Loyalty\Domain\Wallet\Event\WalletCreated;
+use App\Loyalty\Domain\Wallet\Wallet;
 use App\Loyalty\Domain\Wallet\WalletId;
 use App\Shared\Domain\EventSourcing\DomainEventsStream;
 use App\Shared\Domain\EventSourcing\Exception\ConcurrencyConflict;
@@ -33,7 +36,7 @@ final class DbalEventStoreTest extends IntegrationTestCase
     #[Test]
     public function it_returns_an_empty_stream_for_an_unknown_aggregate(): void
     {
-        $stream = $this->eventStore->load(WalletId::generate()->value);
+        $stream = $this->eventStore->load(Wallet::aggregateType(), WalletId::generate()->value);
 
         self::assertTrue($stream->isEmpty());
     }
@@ -45,13 +48,13 @@ final class DbalEventStoreTest extends IntegrationTestCase
         $transferId = TransferId::generate();
         $occurredAt = new \DateTimeImmutable('2026-01-01 12:00:00');
 
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new WalletCreated($walletId->value, $occurredAt),
             new PointsAdded($walletId->value, 300, null, $occurredAt),
             new PointsWithdrawn($walletId->value, 120, $transferId->value, $occurredAt),
         ), -1);
 
-        $stream = $this->eventStore->load($walletId->value)->toArray();
+        $stream = $this->eventStore->load(Wallet::aggregateType(), $walletId->value)->toArray();
 
         self::assertCount(3, $stream);
         self::assertInstanceOf(WalletCreated::class, $stream[0]);
@@ -71,19 +74,19 @@ final class DbalEventStoreTest extends IntegrationTestCase
         $walletId = WalletId::generate();
         $occurredAt = new \DateTimeImmutable('2026-01-01 12:00:00');
 
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new WalletCreated($walletId->value, $occurredAt),
         ), -1);
 
         // All three share a timestamp, so only the version column can order them.
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new PointsAdded($walletId->value, 10, null, $occurredAt),
             new PointsAdded($walletId->value, 20, null, $occurredAt),
         ), 0);
 
         $amounts = array_map(
             static fn (object $event): ?int => $event instanceof PointsAdded ? $event->points : null,
-            $this->eventStore->load($walletId->value)->toArray(),
+            $this->eventStore->load(Wallet::aggregateType(), $walletId->value)->toArray(),
         );
 
         self::assertSame([null, 10, 20], $amounts);
@@ -95,18 +98,18 @@ final class DbalEventStoreTest extends IntegrationTestCase
         $walletId = WalletId::generate();
         $occurredAt = new \DateTimeImmutable('2026-01-01 12:00:00');
 
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new WalletCreated($walletId->value, $occurredAt),
         ), -1);
 
         // Two concurrent writers both loaded the wallet at version 0.
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new PointsAdded($walletId->value, 10, null, $occurredAt),
         ), 0);
 
         $this->expectException(ConcurrencyConflict::class);
 
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new PointsAdded($walletId->value, 20, null, $occurredAt),
         ), 0);
     }
@@ -117,22 +120,22 @@ final class DbalEventStoreTest extends IntegrationTestCase
         $walletId = WalletId::generate();
         $occurredAt = new \DateTimeImmutable('2026-01-01 12:00:00');
 
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new WalletCreated($walletId->value, $occurredAt),
         ), -1);
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new PointsAdded($walletId->value, 10, null, $occurredAt),
         ), 0);
 
         try {
-            $this->eventStore->append($walletId->value, DomainEventsStream::of(
+            $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
                 new PointsAdded($walletId->value, 20, null, $occurredAt),
             ), 0);
         } catch (ConcurrencyConflict) {
             // expected
         }
 
-        $stream = $this->eventStore->load($walletId->value)->toArray();
+        $stream = $this->eventStore->load(Wallet::aggregateType(), $walletId->value)->toArray();
 
         self::assertCount(2, $stream, 'The rejected write must leave no trace in the stream.');
     }
@@ -142,9 +145,9 @@ final class DbalEventStoreTest extends IntegrationTestCase
     {
         $walletId = WalletId::generate();
 
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(), -1);
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(), -1);
 
-        self::assertTrue($this->eventStore->load($walletId->value)->isEmpty());
+        self::assertTrue($this->eventStore->load(Wallet::aggregateType(), $walletId->value)->isEmpty());
     }
 
     #[Test]
@@ -152,7 +155,7 @@ final class DbalEventStoreTest extends IntegrationTestCase
     {
         $walletId = WalletId::generate();
 
-        $this->eventStore->append($walletId->value, DomainEventsStream::of(
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
             new WalletCreated($walletId->value, new \DateTimeImmutable('2026-01-01 12:00:00')),
         ), -1);
 
@@ -162,5 +165,48 @@ final class DbalEventStoreTest extends IntegrationTestCase
         );
 
         self::assertSame('wallet_created', $storedName);
+    }
+
+    #[Test]
+    public function it_keeps_streams_of_different_aggregate_types_apart(): void
+    {
+        // Two aggregates deliberately sharing an id. UUIDs make this collision
+        // implausible in practice, but the store must not depend on that: the
+        // type is what says which stream is being asked for.
+        $sharedId = WalletId::generate()->value;
+        $occurredAt = new \DateTimeImmutable('2026-01-01 12:00:00');
+
+        $this->eventStore->append(Wallet::aggregateType(), $sharedId, DomainEventsStream::of(
+            new WalletCreated($sharedId, $occurredAt),
+            new PointsAdded($sharedId, 100, null, $occurredAt),
+        ), -1);
+
+        $this->eventStore->append(Transfer::aggregateType(), $sharedId, DomainEventsStream::of(
+            new TransferInitiated($sharedId, $sharedId, WalletId::generate()->value, 50, $occurredAt),
+        ), -1);
+
+        $walletStream = $this->eventStore->load(Wallet::aggregateType(), $sharedId)->toArray();
+        $transferStream = $this->eventStore->load(Transfer::aggregateType(), $sharedId)->toArray();
+
+        self::assertCount(2, $walletStream);
+        self::assertCount(1, $transferStream);
+        self::assertInstanceOf(TransferInitiated::class, $transferStream[0]);
+    }
+
+    #[Test]
+    public function it_stores_the_aggregate_type_alongside_the_stream(): void
+    {
+        $walletId = WalletId::generate();
+
+        $this->eventStore->append(Wallet::aggregateType(), $walletId->value, DomainEventsStream::of(
+            new WalletCreated($walletId->value, new \DateTimeImmutable('2026-01-01 12:00:00')),
+        ), -1);
+
+        $storedType = $this->connection->fetchOne(
+            'SELECT aggregate_type FROM events WHERE aggregate_id = :aggregateId',
+            ['aggregateId' => $walletId->value],
+        );
+
+        self::assertSame('wallet', $storedType);
     }
 }

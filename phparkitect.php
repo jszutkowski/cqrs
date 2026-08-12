@@ -66,10 +66,10 @@ return static function (Config $config): void {
         ->should(new IsFinal())
         ->because('handlers are not designed for inheritance');
 
-    $projectionsAreFinal = Rule::allClasses()
-        ->that(new ResideInOneOfTheseNamespaces('App\*\Infrastructure\Projection\*'))
+    $projectorsAreFinal = Rule::allClasses()
+        ->that(new ResideInOneOfTheseNamespaces('App\*\Infrastructure\Projector\*'))
         ->should(new IsFinal())
-        ->because('projections are leaf classes');
+        ->because('projectors are leaf classes');
 
     // Aggregates expose intention-revealing behaviour, so a public setter is a
     // sign that a rule leaked out of the model into its callers.
@@ -83,6 +83,6 @@ return static function (Config $config): void {
         ->add($classSet, $applicationIsolation)
         ->add($classSet, $userInterfaceIsolation)
         ->add($classSet, $handlersAreFinal)
-        ->add($classSet, $projectionsAreFinal)
+        ->add($classSet, $projectorsAreFinal)
         ->add($classSet, $domainHasNoSetters);
 };

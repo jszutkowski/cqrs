@@ -21,7 +21,7 @@ final readonly class EventSourcedWallets implements Wallets
 
     public function get(WalletId $walletId): Wallet
     {
-        $stream = $this->eventStore->load($walletId->value);
+        $stream = $this->eventStore->load(Wallet::aggregateType(), $walletId->value);
 
         if ($stream->isEmpty()) {
             throw WalletNotFound::withId($walletId);
@@ -34,7 +34,7 @@ final readonly class EventSourcedWallets implements Wallets
     {
         $events = $wallet->popRecordedEvents();
 
-        $this->eventStore->append($wallet->aggregateId(), $events, $wallet->committedVersion());
+        $this->eventStore->append(Wallet::aggregateType(), $wallet->aggregateId(), $events, $wallet->committedVersion());
 
         $this->eventBus->publish(...$events->toArray());
     }

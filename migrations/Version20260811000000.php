@@ -19,13 +19,14 @@ final class Version20260811000000 extends AbstractMigration
         $this->addSql(<<<'SQL'
             CREATE TABLE events (
                 id BIGINT UNSIGNED AUTO_INCREMENT NOT NULL,
+                aggregate_type VARCHAR(50) NOT NULL,
                 aggregate_id CHAR(36) NOT NULL,
                 version INT NOT NULL,
                 event_name VARCHAR(100) NOT NULL,
                 payload JSON NOT NULL,
                 occurred_at DATETIME(6) NOT NULL,
                 PRIMARY KEY (id),
-                UNIQUE KEY uniq_aggregate_version (aggregate_id, version)
+                UNIQUE KEY uniq_aggregate_version (aggregate_type, aggregate_id, version)
             ) DEFAULT CHARACTER SET utf8mb4 ENGINE = InnoDB
             SQL);
 

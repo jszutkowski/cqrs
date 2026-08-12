@@ -21,7 +21,7 @@ final readonly class EventSourcedTransfers implements Transfers
 
     public function get(TransferId $transferId): Transfer
     {
-        $stream = $this->eventStore->load($transferId->value);
+        $stream = $this->eventStore->load(Transfer::aggregateType(), $transferId->value);
 
         if ($stream->isEmpty()) {
             throw TransferNotFound::withId($transferId);
@@ -34,7 +34,7 @@ final readonly class EventSourcedTransfers implements Transfers
     {
         $events = $transfer->popRecordedEvents();
 
-        $this->eventStore->append($transfer->aggregateId(), $events, $transfer->committedVersion());
+        $this->eventStore->append(Transfer::aggregateType(), $transfer->aggregateId(), $events, $transfer->committedVersion());
 
         $this->eventBus->publish(...$events->toArray());
     }

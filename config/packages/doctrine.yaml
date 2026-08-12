@@ -7,7 +7,5 @@ doctrine:
         charset: utf8mb4
         profiling_collect_backtrace: '%kernel.debug%'
 
-when@test:
-    doctrine:
-        dbal:
-            dbname_suffix: '_test'
+# No when@test override: the test database is named outright in .env.test, so
+# the connection string you read is the one that is actually used.
